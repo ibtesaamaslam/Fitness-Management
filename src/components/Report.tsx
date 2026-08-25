@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { Member, Payment } from '../types';
 import { isMemberArchived } from '../lib/dateUtils';
+import { GenderBadge } from './Members';
 
 const CATEGORY_COLORS: { [key: string]: string } = {
   'Strength': 'bg-amber-500/20 text-amber-400 border border-amber-500/30',
@@ -58,6 +59,7 @@ const MemberReportDetails: React.FC<{ member: Member; payments: Payment[] }> = (
                     <div>
                         <div className="flex flex-wrap items-center gap-2">
                             <h2 className="text-3xl font-bold text-text-primary">{member.name}</h2>
+                            <GenderBadge gender={member.gender || 'Male'} size="md" />
                             <span className={`px-2.5 py-0.5 rounded-full text-xs font-semibold ${CATEGORY_COLORS[member.category || 'Strength'] || 'bg-gray-500/20 text-gray-400'}`}>
                                 {member.category || 'Strength'}
                             </span>
@@ -103,6 +105,7 @@ const MemberReportDetails: React.FC<{ member: Member; payments: Payment[] }> = (
                 <div>
                     <h3 className="text-xl font-semibold text-text-primary mb-3">Member Details Profile</h3>
                     <div className="grid grid-cols-2 md:grid-cols-3 gap-4 bg-secondary p-4 rounded-lg">
+                        <div><span className="font-semibold text-text-secondary block text-xs">Gender</span> <span className="text-text-primary font-medium flex items-center mt-0.5"><GenderBadge gender={member.gender || 'Male'} size="sm" /></span></div>
                         <div><span className="font-semibold text-text-secondary block text-xs">Program/Category</span> <span className="text-primary font-bold text-base">{member.category || 'Strength'}</span></div>
                         <div><span className="font-semibold text-text-secondary block text-xs">Age</span> <span className="text-text-primary font-medium">{member.age} yrs</span></div>
                         <div><span className="font-semibold text-text-secondary block text-xs">Phone</span> <span className="text-text-primary font-medium">{member.phone}</span></div>
@@ -211,7 +214,7 @@ const Report: React.FC<ReportProps> = ({ members, payments }) => {
                         onChange={(e) => setSearchTerm(e.target.value)}
                         className="flex-grow p-3 bg-secondary rounded-lg w-full md:w-auto"
                     />
-                    <button type="submit" className="w-full md:w-auto bg-primary text-white font-bold py-3 px-6 rounded-lg hover:bg-primary-hover transition-colors">
+                    <button type="submit" className="w-full md:w-auto bg-primary text-white font-bold py-3 px-6 rounded-lg hover:bg-primary-hover transition-colors cursor-pointer">
                         Search
                     </button>
                 </form>
@@ -226,12 +229,13 @@ const Report: React.FC<ReportProps> = ({ members, payments }) => {
                             <li key={member.id}>
                                 <button 
                                     onClick={() => handleSelectMember(member)}
-                                    className="w-full text-left p-3 bg-secondary rounded-lg hover:bg-gray-700 flex items-center space-x-4"
+                                    className="w-full text-left p-3 bg-secondary rounded-lg hover:bg-gray-700 flex items-center space-x-4 cursor-pointer"
                                 >
                                     <img src={member.photo} alt={member.name} className="h-10 w-10 rounded-full object-cover" />
                                     <div className="flex-grow">
                                         <div className="flex items-center space-x-2">
                                             <p className="font-semibold">{member.name}</p>
+                                            <GenderBadge gender={member.gender || 'Male'} size="sm" />
                                             <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold ${CATEGORY_COLORS[member.category || 'Strength'] || 'bg-gray-500/20 text-gray-400'}`}>
                                                 {member.category || 'Strength'}
                                             </span>

@@ -4,6 +4,7 @@ import { Member, Payment } from '../types';
 import { getLocalDateString } from '../lib/dateUtils';
 import { MaskedAmount } from './MaskedAmount';
 import { CashIcon, BankIcon, PhonePayIcon } from './icons';
+import { GenderBadge } from './Members';
 
 interface DailyLedgerProps {
   payments: Payment[];
@@ -190,6 +191,9 @@ const DailyLedger: React.FC<DailyLedgerProps> = ({ payments, members, isUnlocked
                       <td className="p-4">
                         <div className="flex flex-wrap items-center gap-2">
                           <span className="font-bold text-text-primary">{p.memberName}</span>
+                          {!isAccessory && memberForPayment && (
+                            <GenderBadge gender={memberForPayment.gender || 'Male'} size="sm" />
+                          )}
                           {isAccessory ? (
                             <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold uppercase bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
                               Accessory

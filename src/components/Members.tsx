@@ -177,8 +177,9 @@ const MemberReportModal: React.FC<{
                 <div className="flex items-center space-x-4 pb-4 border-b border-gray-850">
                     <img src={member.photo || `https://ui-avatars.com/api/?name=${member.name || '?'}&background=374151&color=F9FAFB`} alt="Profile" className="h-16 w-16 rounded-full object-cover bg-secondary border border-gray-700" />
                     <div>
-                        <div className="flex items-center gap-2">
+                        <div className="flex flex-wrap items-center gap-2">
                           <h2 className="text-2xl font-bold text-text-primary">{member.name}</h2>
+                          <GenderBadge gender={member.gender || 'Male'} size="sm" />
                           <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${member.plan === 'Monthly' ? 'bg-indigo-500/20 text-indigo-400 border border-indigo-500/30' : 'bg-pink-500/20 text-pink-400 border border-pink-500/30'}`}>
                             {member.plan} Plan
                           </span>
@@ -550,9 +551,10 @@ const MemberModal: React.FC<{
     useEffect(() => {
         const autoRegNo = getNextRegistrationNo(existingMembers);
         const initialData: Partial<Member> & { paymentMethod?: Payment['method'] } = (member && member.id)
-            ? { ...member, remindersEnabled: member.remindersEnabled ?? true, category: member.category || 'Strength' }
+            ? { ...member, gender: member.gender || 'Male', remindersEnabled: member.remindersEnabled ?? true, category: member.category || 'Strength' }
             : {
                 name: '',
+                gender: 'Male',
                 registrationNo: autoRegNo,
                 age: 0,
                 phone: '',
@@ -642,6 +644,37 @@ const MemberModal: React.FC<{
                         <label className="block text-sm font-medium text-text-secondary mb-1">Full Name</label>
                         <input type="text" name="name" value={formData.name || ''} onChange={handleChange} placeholder="Full Name" className="w-full p-3 bg-secondary rounded-lg" required />
                     </div>
+                    
+                    <div className="col-span-2">
+                        <label className="block text-sm font-medium text-text-secondary mb-1">Gender</label>
+                        <div className="grid grid-cols-2 gap-3">
+                            <button
+                                type="button"
+                                onClick={() => setFormData(prev => ({ ...prev, gender: 'Male' }))}
+                                className={`py-2.5 px-4 rounded-xl font-bold flex items-center justify-center space-x-2 text-sm border transition-all cursor-pointer ${
+                                    (formData.gender || 'Male') === 'Male'
+                                        ? 'bg-blue-600/30 text-blue-400 border-blue-500 shadow-md ring-2 ring-blue-500/40'
+                                        : 'bg-secondary text-text-secondary border-gray-700 hover:bg-gray-700/50'
+                                }`}
+                            >
+                                <span className="text-base font-black">♂</span>
+                                <span>Male</span>
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => setFormData(prev => ({ ...prev, gender: 'Female' }))}
+                                className={`py-2.5 px-4 rounded-xl font-bold flex items-center justify-center space-x-2 text-sm border transition-all cursor-pointer ${
+                                    formData.gender === 'Female'
+                                        ? 'bg-pink-600/30 text-pink-400 border-pink-500 shadow-md ring-2 ring-pink-500/40'
+                                        : 'bg-secondary text-text-secondary border-gray-700 hover:bg-gray-700/50'
+                                }`}
+                            >
+                                <span className="text-base font-black">♀</span>
+                                <span>Female</span>
+                            </button>
+                        </div>
+                    </div>
+
                     <div>
                         <label className="block text-sm font-medium text-text-secondary mb-1 flex items-center justify-between">
                             <span>Registration No.</span>
@@ -771,6 +804,22 @@ const isExpiringSoon = (expiryDate: string, days: number = 7): boolean => {
     return expiry <= threshold && expiry >= today;
 };
 
+export const GenderBadge: React.FC<{ gender?: 'Male' | 'Female' | 'Other'; size?: 'sm' | 'md' }> = ({ gender = 'Male', size = 'md' }) => {
+  const isFemale = gender === 'Female';
+  return (
+    <span className={`inline-flex items-center gap-1 font-semibold rounded-full ${
+      size === 'sm' ? 'px-2 py-0.5 text-[10px]' : 'px-2.5 py-0.5 text-xs'
+    } ${
+      isFemale 
+        ? 'bg-pink-500/20 text-pink-400 border border-pink-500/30' 
+        : 'bg-blue-500/20 text-blue-400 border border-blue-500/30'
+    }`}>
+      <span>{isFemale ? '♀' : '♂'}</span>
+      <span>{gender}</span>
+    </span>
+  );
+};
+
 const CATEGORY_COLORS: { [key: string]: string } = {
   'Strength': 'bg-amber-500/20 text-amber-400 border border-amber-500/30',
   'Cardio': 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30',
@@ -782,11 +831,22 @@ const Members: React.FC<MembersProps> = ({ members, payments, onAddMember, onUpd
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [selectedMember, setSelectedMember] = useState<Partial<Member> | null>(null);
     const [searchTerm, setSearchTerm] = useState('');
+    const [genderFilter, setGenderFilter] = useState<'All' | 'Male' | 'Female'>('All');
     const [lastWarnedMemberId, setLastWarnedMemberId] = useState<string | null>(null);
     const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
     const [memberToDelete, setMemberToDelete] = useState<Member | null>(null);
     const [isReportModalOpen, setIsReportModalOpen] = useState(false);
     const [memberForReport, setMemberForReport] = useState<Member | null>(null);
+
+    const nonArchivedMembers = useMemo(() => {
+        return members.filter(m => !isMemberArchived(m));
+    }, [members]);
+
+    const totalCount = nonArchivedMembers.length;
+    const maleCount = nonArchivedMembers.filter(m => (m.gender || 'Male') === 'Male').length;
+    const femaleCount = nonArchivedMembers.filter(m => m.gender === 'Female').length;
+    const todayStr = getLocalDateString();
+    const activeCount = nonArchivedMembers.filter(m => new Date(m.expiryDate) >= new Date(todayStr)).length;
 
     const handleAddNew = () => {
         setSelectedMember({});
@@ -832,12 +892,17 @@ const Members: React.FC<MembersProps> = ({ members, payments, onAddMember, onUpd
         setSelectedMember(null);
     };
 
-    const filteredMembers = members
-        .filter(m => !isMemberArchived(m))
-        .filter(m =>
-            m.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
-            m.registrationNo.toLowerCase().includes(searchTerm.toLowerCase())
-        );
+    const filteredMembers = useMemo(() => {
+        return nonArchivedMembers
+            .filter(m => {
+                const memberGender = m.gender || 'Male';
+                if (genderFilter !== 'All' && memberGender !== genderFilter) return false;
+                return (
+                    m.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
+                    m.registrationNo.toLowerCase().includes(searchTerm.toLowerCase())
+                );
+            });
+    }, [nonArchivedMembers, genderFilter, searchTerm]);
 
     // Check for expired members in search results to show warning
     useEffect(() => {
@@ -875,7 +940,7 @@ const Members: React.FC<MembersProps> = ({ members, payments, onAddMember, onUpd
     }, [searchTerm, filteredMembers, onWarning, lastWarnedMemberId]);
 
     return (
-        <div className="p-4 md:p-8">
+        <div className="p-4 md:p-8 space-y-6">
             {isModalOpen && <MemberModal member={selectedMember} existingMembers={members} onClose={() => setIsModalOpen(false)} onSave={handleSave} />}
             {isConfirmModalOpen && <ConfirmDeleteModal member={memberToDelete} onClose={() => setIsConfirmModalOpen(false)} onConfirm={handleConfirmDelete} />}
             {isReportModalOpen && (
@@ -889,29 +954,150 @@ const Members: React.FC<MembersProps> = ({ members, payments, onAddMember, onUpd
                 />
             )}
             
-            <div className="flex justify-between items-center mb-6">
-                <h1 className="text-3xl font-bold">Members</h1>
-                <div className="flex items-center space-x-4">
+            {/* Header & Main Actions */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div>
+                    <h1 className="text-3xl font-bold text-text-primary">Members Directory</h1>
+                    <p className="text-sm text-text-secondary mt-1">Manage gym memberships, profiles, categories and gender registration</p>
+                </div>
+                <button 
+                    onClick={handleAddNew} 
+                    className="bg-primary text-white font-bold py-2.5 px-5 rounded-xl hover:bg-primary-hover shadow-lg transition-all flex items-center justify-center space-x-2 cursor-pointer shrink-0"
+                >
+                    <span>+ Add New Member</span>
+                </button>
+            </div>
+
+            {/* Quick Gender & Active Demographics Pills */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                {/* Total */}
+                <div 
+                    onClick={() => setGenderFilter('All')}
+                    className={`p-4 rounded-xl border transition-all cursor-pointer ${
+                        genderFilter === 'All'
+                            ? 'bg-teal-500/15 border-teal-500/50 shadow-md ring-2 ring-teal-500/30'
+                            : 'bg-surface border-gray-800 hover:border-gray-700'
+                    }`}
+                >
+                    <div className="flex items-center justify-between">
+                        <span className="text-xs font-bold text-text-secondary uppercase tracking-wider">Total</span>
+                        <span className="text-xs px-2 py-0.5 rounded-full bg-secondary text-text-secondary font-medium">100%</span>
+                    </div>
+                    <div className="text-2xl font-black text-text-primary mt-1 font-mono">{totalCount}</div>
+                </div>
+
+                {/* Male Members */}
+                <div 
+                    onClick={() => setGenderFilter('Male')}
+                    className={`p-4 rounded-xl border transition-all cursor-pointer ${
+                        genderFilter === 'Male'
+                            ? 'bg-blue-500/20 border-blue-500 shadow-md ring-2 ring-blue-500/40'
+                            : 'bg-surface border-gray-800 hover:border-blue-500/30'
+                    }`}
+                >
+                    <div className="flex items-center justify-between">
+                        <span className="text-xs font-bold text-blue-400 uppercase tracking-wider flex items-center gap-1">
+                            <span>♂</span> Male Members
+                        </span>
+                        <span className="text-xs px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-300 font-medium">
+                            {totalCount > 0 ? Math.round((maleCount / totalCount) * 100) : 0}%
+                        </span>
+                    </div>
+                    <div className="text-2xl font-black text-blue-400 mt-1 font-mono">{maleCount}</div>
+                </div>
+
+                {/* Female Members */}
+                <div 
+                    onClick={() => setGenderFilter('Female')}
+                    className={`p-4 rounded-xl border transition-all cursor-pointer ${
+                        genderFilter === 'Female'
+                            ? 'bg-pink-500/20 border-pink-500 shadow-md ring-2 ring-pink-500/40'
+                            : 'bg-surface border-gray-800 hover:border-pink-500/30'
+                    }`}
+                >
+                    <div className="flex items-center justify-between">
+                        <span className="text-xs font-bold text-pink-400 uppercase tracking-wider flex items-center gap-1">
+                            <span>♀</span> Female Members
+                        </span>
+                        <span className="text-xs px-2 py-0.5 rounded-full bg-pink-500/20 text-pink-300 font-medium">
+                            {totalCount > 0 ? Math.round((femaleCount / totalCount) * 100) : 0}%
+                        </span>
+                    </div>
+                    <div className="text-2xl font-black text-pink-400 mt-1 font-mono">{femaleCount}</div>
+                </div>
+
+                {/* Active */}
+                <div className="p-4 rounded-xl border bg-surface border-gray-800">
+                    <div className="flex items-center justify-between">
+                        <span className="text-xs font-bold text-emerald-400 uppercase tracking-wider">Active</span>
+                        <span className="text-xs px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 font-medium">
+                            {totalCount > 0 ? Math.round((activeCount / totalCount) * 100) : 0}%
+                        </span>
+                    </div>
+                    <div className="text-2xl font-black text-emerald-400 mt-1 font-mono">{activeCount}</div>
+                </div>
+            </div>
+
+            {/* Filter Bar */}
+            <div className="bg-surface border border-gray-800 rounded-2xl p-3.5 shadow-lg flex flex-col md:flex-row md:items-center justify-between gap-4">
+                {/* Search */}
+                <div className="relative flex-1 max-w-md">
                     <input
                         type="text"
-                        placeholder="Search members..."
+                        placeholder="Search by name or Reg. No (e.g. SF-001)..."
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
-                        className="p-2 bg-secondary rounded-lg"
+                        className="w-full pl-9 pr-3 py-2 bg-secondary border border-gray-700/80 rounded-xl text-sm font-medium text-text-primary placeholder-gray-500 outline-none focus:border-primary transition-all"
                     />
-                    <button onClick={handleAddNew} className="bg-primary text-white font-bold py-2 px-4 rounded-lg hover:bg-primary-hover transition-colors">
-                        Add New Member
+                    <svg className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                    </svg>
+                </div>
+
+                {/* Gender Filter Tabs */}
+                <div className="flex items-center bg-secondary/80 p-1 rounded-xl border border-gray-700/80 shrink-0">
+                    <button
+                        onClick={() => setGenderFilter('All')}
+                        className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                            genderFilter === 'All'
+                                ? 'bg-primary text-white shadow'
+                                : 'text-text-secondary hover:text-text-primary'
+                        }`}
+                    >
+                        All ({totalCount})
+                    </button>
+                    <button
+                        onClick={() => setGenderFilter('Male')}
+                        className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1 cursor-pointer ${
+                            genderFilter === 'Male'
+                                ? 'bg-blue-600 text-white shadow'
+                                : 'text-text-secondary hover:text-blue-400'
+                        }`}
+                    >
+                        <span>♂</span> Male ({maleCount})
+                    </button>
+                    <button
+                        onClick={() => setGenderFilter('Female')}
+                        className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1 cursor-pointer ${
+                            genderFilter === 'Female'
+                                ? 'bg-pink-600 text-white shadow'
+                                : 'text-text-secondary hover:text-pink-400'
+                        }`}
+                    >
+                        <span>♀</span> Female ({femaleCount})
                     </button>
                 </div>
             </div>
-            <div className="bg-surface rounded-lg shadow-lg overflow-hidden">
+
+            <div className="bg-surface rounded-xl shadow-lg border border-gray-800 overflow-hidden">
                 <div className="overflow-x-auto">
                     <table className="w-full text-left">
-                        <thead className="bg-secondary">
+                        <thead className="bg-secondary text-text-secondary text-xs uppercase tracking-wider">
                             <tr>
                                 <th className="p-4">Photo</th>
                                 <th className="p-4">Reg. No</th>
                                 <th className="p-4">Name</th>
+                                <th className="p-4">Gender</th>
                                 <th className="p-4">Category</th>
                                 <th className="p-4">Plan</th>
                                 <th className="p-4">Fee Status</th>
@@ -920,11 +1106,20 @@ const Members: React.FC<MembersProps> = ({ members, payments, onAddMember, onUpd
                             </tr>
                         </thead>
                         <tbody>
-                            {filteredMembers.map(member => (
-                                <tr key={member.id} className="border-b border-secondary hover:bg-gray-700/50">
-                                    <td className="p-4"><img src={member.photo} alt={member.name} className="h-12 w-12 rounded-full object-cover"/></td>
-                                    <td className="p-4 font-mono text-text-secondary">{member.registrationNo}</td>
-                                    <td className="p-4 font-medium">{member.name}</td>
+                            {filteredMembers.length === 0 ? (
+                                <tr>
+                                    <td colSpan={9} className="text-center p-8 text-text-secondary italic">
+                                        No members found matching your filter criteria.
+                                    </td>
+                                </tr>
+                            ) : filteredMembers.map(member => (
+                                <tr key={member.id} className="border-b border-secondary hover:bg-gray-700/50 transition-colors">
+                                    <td className="p-4"><img src={member.photo} alt={member.name} className="h-12 w-12 rounded-full object-cover bg-secondary"/></td>
+                                    <td className="p-4 font-mono text-text-secondary font-semibold">{member.registrationNo}</td>
+                                    <td className="p-4 font-medium text-text-primary">{member.name}</td>
+                                    <td className="p-4">
+                                        <GenderBadge gender={member.gender || 'Male'} size="sm" />
+                                    </td>
                                     <td className="p-4">
                                         <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${CATEGORY_COLORS[member.category || 'Strength'] || 'bg-gray-500/20 text-gray-400'}`}>
                                             {member.category || 'Strength'}
@@ -932,7 +1127,7 @@ const Members: React.FC<MembersProps> = ({ members, payments, onAddMember, onUpd
                                     </td>
                                     <td className="p-4">{member.plan}</td>
                                     <td className="p-4">
-                                        <span className={`px-3 py-1 rounded-full text-sm font-semibold ${member.feePaid ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'}`}>
+                                        <span className={`px-3 py-1 rounded-full text-xs font-bold uppercase ${member.feePaid ? 'bg-green-500/20 text-green-400 border border-green-500/30' : 'bg-red-500/20 text-red-400 border border-red-500/30'}`}>
                                             {member.feePaid ? 'Paid' : 'Unpaid'}
                                         </span>
                                     </td>
@@ -947,9 +1142,9 @@ const Members: React.FC<MembersProps> = ({ members, payments, onAddMember, onUpd
                                         </div>
                                     </td>
                                     <td className="p-4 flex items-center space-x-2">
-                                        <button onClick={() => handleViewReport(member)} className="text-gray-400 hover:text-white" title="View Report"><ReportIcon/></button>
-                                        <button onClick={() => handleEdit(member)} className="text-blue-400 hover:text-blue-300">Edit</button>
-                                        <button onClick={() => handleDeleteRequest(member)} className="text-red-400 hover:text-red-300">Delete</button>
+                                        <button onClick={() => handleViewReport(member)} className="text-gray-400 hover:text-white p-1 rounded" title="View Report"><ReportIcon/></button>
+                                        <button onClick={() => handleEdit(member)} className="text-blue-400 hover:text-blue-300 px-2 py-1 bg-blue-500/10 rounded">Edit</button>
+                                        <button onClick={() => handleDeleteRequest(member)} className="text-red-400 hover:text-red-300 px-2 py-1 bg-red-500/10 rounded">Delete</button>
                                     </td>
                                 </tr>
                             ))}

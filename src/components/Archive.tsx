@@ -3,6 +3,7 @@ import React, { useMemo } from 'react';
 import { Member } from '../types';
 import { TrashIcon } from './icons';
 import { isMemberArchived } from '../lib/dateUtils';
+import { GenderBadge } from './Members';
 
 interface ArchiveProps {
   members: Member[];
@@ -63,6 +64,7 @@ const Archive: React.FC<ArchiveProps> = ({ members, onDeleteMember }) => {
                        <div>
                          <div className="flex flex-wrap items-center gap-2">
                            <span className="font-bold text-text-primary">{member.name}</span>
+                           <GenderBadge gender={member.gender || 'Male'} size="sm" />
                            <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold ${CATEGORY_COLORS[member.category || 'Strength'] || 'bg-gray-500/20 text-gray-400'}`}>
                              {member.category || 'Strength'}
                            </span>

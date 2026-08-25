@@ -4,6 +4,7 @@ import { DownloadIcon, TrashIcon, CloseIcon, CashIcon, BankIcon, PhonePayIcon, A
 import { getLocalDateString, getLocalMonthString, isMemberArchived } from '../lib/dateUtils';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { MaskedAmount } from './MaskedAmount';
+import { GenderBadge } from './Members';
 
 const isExpiringSoon = (expiryDate: string, days: number = 7): boolean => {
     const todayStr = getLocalDateString();
@@ -72,17 +73,19 @@ const Fees: React.FC<FeesProps> = ({ members, payments, accessorySales, onToggle
   const [filterMonth, setFilterMonth] = useState<string>(getLocalMonthString());
   const [filterPlan, setFilterPlan] = useState<string>('All');
   const [filterStatus, setFilterStatus] = useState<string>('All');
+  const [filterGender, setFilterGender] = useState<'All' | 'Male' | 'Female'>('All');
   
   const [paymentToDelete, setPaymentToDelete] = useState<Payment | null>(null);
 
   const filteredMembers = useMemo(() => {
     return members.filter(member => {
       if (isMemberArchived(member)) return false;
+      const genderMatch = filterGender === 'All' || (member.gender || 'Male') === filterGender;
       const planMatch = filterPlan === 'All' || member.plan === filterPlan;
       const statusMatch = filterStatus === 'All' || (filterStatus === 'Paid' && member.feePaid) || (filterStatus === 'Unpaid' && !member.feePaid);
-      return planMatch && statusMatch;
+      return genderMatch && planMatch && statusMatch;
     });
-  }, [members, filterPlan, filterStatus]);
+  }, [members, filterGender, filterPlan, filterStatus]);
   
   const paymentsInMonth = useMemo(() => {
      return payments.filter(p => p.date.startsWith(filterMonth));
@@ -261,6 +264,22 @@ const Fees: React.FC<FeesProps> = ({ members, payments, accessorySales, onToggle
           {viewMode === 'status' && (
             <>
               <div className="flex items-center gap-2 bg-secondary/90 border border-gray-700/80 px-3 py-1.5 rounded-xl">
+                <label htmlFor="gender-filter" className="text-xs font-bold text-text-secondary uppercase tracking-wider whitespace-nowrap">
+                  Gender:
+                </label>
+                <select 
+                  id="gender-filter" 
+                  value={filterGender} 
+                  onChange={(e) => setFilterGender(e.target.value as 'All' | 'Male' | 'Female')} 
+                  className="bg-[#1e293b] text-sm font-bold text-text-primary outline-none cursor-pointer px-1 py-0.5 rounded"
+                >
+                  <option value="All" className="bg-[#1e293b] text-white">All Genders</option>
+                  <option value="Male" className="bg-[#1e293b] text-white">♂ Male</option>
+                  <option value="Female" className="bg-[#1e293b] text-white">♀ Female</option>
+                </select>
+              </div>
+
+              <div className="flex items-center gap-2 bg-secondary/90 border border-gray-700/80 px-3 py-1.5 rounded-xl">
                 <label htmlFor="plan" className="text-xs font-bold text-text-secondary uppercase tracking-wider whitespace-nowrap">
                   Plan:
                 </label>
@@ -268,12 +287,12 @@ const Fees: React.FC<FeesProps> = ({ members, payments, accessorySales, onToggle
                   id="plan" 
                   value={filterPlan} 
                   onChange={(e) => setFilterPlan(e.target.value)} 
-                  className="bg-transparent text-sm font-bold text-text-primary outline-none cursor-pointer"
+                  className="bg-[#1e293b] text-sm font-bold text-text-primary outline-none cursor-pointer px-1 py-0.5 rounded"
                 >
-                  <option value="All">All Plans</option>
-                  <option value="Monthly">Monthly</option>
-                  <option value="Quarterly">Quarterly</option>
-                  <option value="Yearly">Yearly</option>
+                  <option value="All" className="bg-[#1e293b] text-white">All Plans</option>
+                  <option value="Monthly" className="bg-[#1e293b] text-white">Monthly</option>
+                  <option value="Quarterly" className="bg-[#1e293b] text-white">Quarterly</option>
+                  <option value="Yearly" className="bg-[#1e293b] text-white">Yearly</option>
                 </select>
               </div>
 
@@ -285,11 +304,11 @@ const Fees: React.FC<FeesProps> = ({ members, payments, accessorySales, onToggle
                   id="status" 
                   value={filterStatus} 
                   onChange={(e) => setFilterStatus(e.target.value)} 
-                  className="bg-transparent text-sm font-bold text-text-primary outline-none cursor-pointer"
+                  className="bg-[#1e293b] text-sm font-bold text-text-primary outline-none cursor-pointer px-1 py-0.5 rounded"
                 >
-                  <option value="All">All Statuses</option>
-                  <option value="Paid">Paid</option>
-                  <option value="Unpaid">Unpaid</option>
+                  <option value="All" className="bg-[#1e293b] text-white">All Statuses</option>
+                  <option value="Paid" className="bg-[#1e293b] text-white">Paid</option>
+                  <option value="Unpaid" className="bg-[#1e293b] text-white">Unpaid</option>
                 </select>
               </div>
             </>
@@ -391,6 +410,7 @@ const Fees: React.FC<FeesProps> = ({ members, payments, accessorySales, onToggle
                 <tr>
                   <th className="p-4">RegNo</th>
                   <th className="p-4">Member</th>
+                  <th className="p-4">Gender</th>
                   <th className="p-4">Plan</th>
                   <th className="p-4">Fee Amount</th>
                   <th className="p-4">Status</th>
@@ -413,6 +433,9 @@ const Fees: React.FC<FeesProps> = ({ members, payments, accessorySales, onToggle
                             {member.category || 'Strength'}
                           </span>
                         </div>
+                      </td>
+                      <td className="p-4">
+                        <GenderBadge gender={member.gender || 'Male'} size="sm" />
                       </td>
                       <td className="p-4">{member.plan}</td>
                       <td className="p-4">
@@ -533,6 +556,9 @@ const Fees: React.FC<FeesProps> = ({ members, payments, accessorySales, onToggle
                           <td className="p-4 font-medium">
                             <div className="flex flex-wrap items-center gap-2">
                               <span>{payment.memberName}</span>
+                              {!isAccessory && memberForPayment && (
+                                <GenderBadge gender={memberForPayment.gender || 'Male'} size="sm" />
+                              )}
                               {isAccessory ? (
                                 <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold uppercase bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
                                   Accessory

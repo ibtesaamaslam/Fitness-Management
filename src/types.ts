@@ -98,10 +98,13 @@ export interface MeasurementEntry {
   bodyFat?: number; // in %
 }
 
+export type Gender = 'Male' | 'Female' | 'Other';
+
 export interface Member {
   id: string;
   registrationNo: string;
   name: string;
+  gender?: Gender;
   age: number;
   phone: string;
   plan: 'Monthly' | 'Quarterly' | 'Yearly';
